@@ -7,10 +7,6 @@
 static volatile bool done = false;
 const std::string DEFAULT_SOCKET_NAME = "/tmp/queue";
 
-boost::asio::io_service io_service;
-boost::asio::local::stream_protocol::endpoint ep(DEFAULT_SOCKET_NAME);
-boost::asio::local::stream_protocol::socket socket_stream(io_service);
-
 static void sig_int_term_handler(int signum) {
     if (signum == SIGINT) {
         std::cerr << "Interrupt signal (" << signum << ") received." << std::endl;
@@ -21,10 +17,18 @@ static void sig_int_term_handler(int signum) {
 }
 
 int main(int argc, char** argv) {
-    std::cerr << "Read socket messages" << std::endl;
 
     signal(SIGINT,  sig_int_term_handler);
     signal(SIGTERM, sig_int_term_handler);
+
+    auto socket_name = DEFAULT_SOCKET_NAME;
+    if (argc == 2) {
+        socket_name = argv[1];
+    }
+
+    boost::asio::io_service io_service;
+    boost::asio::local::stream_protocol::endpoint ep(socket_name);
+    boost::asio::local::stream_protocol::socket socket_stream(io_service);
 
     try {
         // connect to the UNIX socket
@@ -40,6 +44,8 @@ int main(int argc, char** argv) {
 
     boost::asio::streambuf socket_buf;
     boost::system::error_code error;
+
+    std::cerr << "Read socket messages" << std::endl;
 
     while (!done) {
         boost::asio::read_until(socket_stream, socket_buf, "\n", error);
